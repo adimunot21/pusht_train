@@ -13,6 +13,7 @@ wandb/
 # Local data downloads (HuggingFace cache lives in ~/.cache; nothing here)
 data/
 
-# Editor / OS
+# Editor / OS / local tooling
 .vscode/
 .idea/
+.claude/
