@@ -24,8 +24,12 @@
 
 set -euo pipefail
 
-source ~/miniforge3/etc/profile.d/conda.sh
-conda activate pusht
+# Caller is responsible for activating the right env. We just check the
+# lerobot CLI is on PATH so the failure mode is clear instead of cryptic.
+command -v lerobot-train >/dev/null || {
+  echo "[train_diffusion] lerobot-train not on PATH. Activate the env first." >&2
+  exit 1
+}
 
 OUTPUT_DIR="${OUTPUT_DIR:-outputs/train/diffusion_pusht}"
 

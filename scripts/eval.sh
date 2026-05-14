@@ -18,8 +18,10 @@ set -euo pipefail
 CKPT="${1:?usage: $0 <checkpoint-dir-or-hub-id> [n_episodes]}"
 N_EPISODES="${2:-100}"
 
-source ~/miniforge3/etc/profile.d/conda.sh
-conda activate pusht
+command -v lerobot-eval >/dev/null || {
+  echo "[eval] lerobot-eval not on PATH. Activate the env first." >&2
+  exit 1
+}
 
 TS="$(date +%Y%m%d_%H%M%S)"
 SAFE_NAME="$(echo "$CKPT" | tr '/' '_')"

@@ -15,8 +15,10 @@
 
 set -euo pipefail
 
-source ~/miniforge3/etc/profile.d/conda.sh
-conda activate pusht
+command -v lerobot-train >/dev/null || {
+  echo "[train_act] lerobot-train not on PATH. Activate the env first." >&2
+  exit 1
+}
 
 OUTPUT_DIR="${OUTPUT_DIR:-outputs/train/act_pusht}"
 
