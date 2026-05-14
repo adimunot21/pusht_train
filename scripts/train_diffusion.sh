@@ -16,6 +16,11 @@
 #
 # wandb: enabled iff WANDB_API_KEY is set in the environment (avoids the
 # interactive login prompt that would otherwise hang headless runs).
+#
+# Hub push: lerobot 0.5.x defaults policy.push_to_hub=true (which forces
+# a repo_id requirement at config-validation time). We default to false
+# here and opt-in via HF_REPO_ID, e.g.:
+#     HF_REPO_ID=adimunot21/diffusion_pusht ./scripts/train_diffusion.sh
 
 set -euo pipefail
 
@@ -27,6 +32,11 @@ OUTPUT_DIR="${OUTPUT_DIR:-outputs/train/diffusion_pusht}"
 WANDB_ARG="--wandb.enable=false"
 if [ -n "${WANDB_API_KEY:-}" ]; then
   WANDB_ARG="--wandb.enable=true"
+fi
+
+HUB_ARGS="--policy.push_to_hub=false"
+if [ -n "${HF_REPO_ID:-}" ]; then
+  HUB_ARGS="--policy.push_to_hub=true --policy.repo_id=${HF_REPO_ID}"
 fi
 
 RESUME_ARG=""
@@ -48,5 +58,6 @@ exec lerobot-train \
   --seed=100000 \
   --output_dir="$OUTPUT_DIR" \
   $WANDB_ARG \
+  $HUB_ARGS \
   $RESUME_ARG \
   "$@"

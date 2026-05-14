@@ -24,6 +24,12 @@ if [ -n "${WANDB_API_KEY:-}" ]; then
   WANDB_ARG="--wandb.enable=true"
 fi
 
+# Hub push opt-in via HF_REPO_ID (see train_diffusion.sh for rationale).
+HUB_ARGS="--policy.push_to_hub=false"
+if [ -n "${HF_REPO_ID:-}" ]; then
+  HUB_ARGS="--policy.push_to_hub=true --policy.repo_id=${HF_REPO_ID}"
+fi
+
 RESUME_ARG=""
 if [ -d "$OUTPUT_DIR/checkpoints" ]; then
   RESUME_ARG="--resume=true"
@@ -42,5 +48,6 @@ exec lerobot-train \
   --seed=100000 \
   --output_dir="$OUTPUT_DIR" \
   $WANDB_ARG \
+  $HUB_ARGS \
   $RESUME_ARG \
   "$@"
