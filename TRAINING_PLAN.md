@@ -140,7 +140,7 @@ directory back to local before stopping the pod.
 ## Open questions for you before launch
 
 1. **Hub push.** Default off. Want me to flip it on with
-   `HF_REPO_ID=adimunot21/<policy>_pusht ./scripts/train_<policy>.sh` so
+   `HF_REPO_ID=adimunot/<policy>_pusht ./scripts/train_<policy>.sh` so
    each finished run auto-uploads to your HF account? Otherwise we just
    keep checkpoints on the pod/local.
 2. **wandb.** Same gating: `WANDB_API_KEY` env var enables it. Off by

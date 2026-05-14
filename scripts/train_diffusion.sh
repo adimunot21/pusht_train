@@ -20,7 +20,7 @@
 # Hub push: lerobot 0.5.x defaults policy.push_to_hub=true (which forces
 # a repo_id requirement at config-validation time). We default to false
 # here and opt-in via HF_REPO_ID, e.g.:
-#     HF_REPO_ID=adimunot21/diffusion_pusht ./scripts/train_diffusion.sh
+#     HF_REPO_ID=adimunot/diffusion_pusht ./scripts/train_diffusion.sh
 
 set -euo pipefail
 

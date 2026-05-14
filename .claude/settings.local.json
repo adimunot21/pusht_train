@@ -8,7 +8,9 @@
       "Bash(git init *)",
       "Bash(git add *)",
       "Bash(git -c user.name=adimunot21 -c user.email=adimunot21@gmail.com commit -q -m ' *)",
-      "Bash(gh auth *)"
+      "Bash(gh auth *)",
+      "Bash(git remote *)",
+      "Bash(git push *)"
     ]
   }
 }
