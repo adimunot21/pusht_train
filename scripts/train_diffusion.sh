@@ -3,10 +3,16 @@
 # model card (https://huggingface.co/lerobot/diffusion_pusht).
 # Target: pc_success_max_overlap ≈ 65.4%, avg_max_reward ≈ 0.955.
 #
-# --dataset.use_imagenet_stats=true is the lerobot ≥0.5.0 default but is
-# passed explicitly here: (a) documents intent, (b) is defensive against
-# a future default flip, (c) is the load-bearing fix for lerobot 0.4.x
-# where the default was False (issue #3221).
+# Two load-bearing flags vs lerobot 0.5.1 defaults:
+#
+#   --dataset.use_imagenet_stats=true   (0.5.x default = True; 0.4.x default
+#   was False — issue #3221). Passed explicitly to document intent and be
+#   defensive against future default flips.
+#
+#   --policy.crop_shape='[84, 84]'      (0.5.x default = None — silently
+#   disables random-crop augmentation; published Diffusion-Policy-on-PushT
+#   uses [84, 84]. Without this, training loss converges fine but eval
+#   plateaus at ~0.65 avg_max_reward vs published 0.955.)
 #
 # VRAM: batch_size=64 needs ≳12GB. Will OOM on the local GTX 1650 (4GB).
 # Use scripts/train_diffusion_dryrun.sh for local sanity; full run on RunPod.
@@ -52,6 +58,7 @@ fi
 exec lerobot-train \
   --policy.type=diffusion \
   --policy.device=cuda \
+  --policy.crop_shape='[84, 84]' \
   --dataset.repo_id=lerobot/pusht \
   --dataset.use_imagenet_stats=true \
   --env.type=pusht \

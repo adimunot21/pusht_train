@@ -9,6 +9,13 @@ These two metrics produce different numbers for the same rollouts.
 
 This script reports BOTH from a single eval, so the criterion gap
 (lerobot issue #470) is visible at a glance.
+
+Supports two eval_info.json schemas:
+  - lerobot 0.5.x multi-task path (current): top-level dict with
+    `per_task: [{task_group, task_id, metrics: {sum_rewards, max_rewards,
+    successes, video_paths}}]`, `per_group`, `overall`.
+  - lerobot 0.4.x / single-task path (legacy): top-level dict with
+    `per_episode: [{sum_reward, max_reward, success, seed}]`, `aggregated`.
 """
 from __future__ import annotations
 
@@ -51,6 +58,57 @@ def coerce_success(value) -> bool:
     return False
 
 
+def extract_episodes(data: dict) -> tuple[list[float], list[bool]]:
+    """Return (per-episode max_rewards, per-episode successes).
+
+    Handles both lerobot 0.5.x multi-task schema (per_task[].metrics) and
+    legacy single-task schema (top-level per_episode).
+    """
+    max_rewards: list[float] = []
+    successes: list[bool] = []
+
+    # multi-task schema (lerobot 0.5.x default for PushT-as-single-task)
+    per_task = data.get("per_task")
+    if isinstance(per_task, list) and per_task:
+        for task in per_task:
+            metrics = task.get("metrics") or {}
+            mr = metrics.get("max_rewards") or []
+            sx = metrics.get("successes") or []
+            for r, s in zip(mr, sx):
+                if r is None:
+                    continue
+                max_rewards.append(float(r))
+                successes.append(coerce_success(s))
+            # If lists have different lengths, pull any remaining max_rewards
+            # without successes (assume not-success).
+            if len(mr) > len(sx):
+                for r in mr[len(sx):]:
+                    if r is None:
+                        continue
+                    max_rewards.append(float(r))
+                    successes.append(False)
+        if max_rewards:
+            return max_rewards, successes
+
+    # legacy single-task schema
+    per_episode = data.get("per_episode")
+    if isinstance(per_episode, list) and per_episode:
+        for ep in per_episode:
+            r = ep.get("max_reward")
+            if r is None:
+                continue
+            max_rewards.append(float(r))
+            successes.append(coerce_success(ep.get("success")))
+        if max_rewards:
+            return max_rewards, successes
+
+    raise SystemExit(
+        "Could not find per-episode max_rewards in eval_info.json. "
+        "Looked for `per_task[].metrics.max_rewards` (lerobot 0.5.x) and "
+        "`per_episode[].max_reward` (legacy). Neither was present."
+    )
+
+
 def main() -> None:
     if len(sys.argv) != 2:
         print("usage: report.py <eval-output-dir>", file=sys.stderr)
@@ -60,36 +118,21 @@ def main() -> None:
     json_path = find_eval_json(out_dir)
     data = json.loads(json_path.read_text())
 
-    per_episode = data.get("per_episode") or []
-    if not per_episode:
-        raise SystemExit(f"per_episode is empty in {json_path}")
-
-    n = len(per_episode)
-    max_rewards: list[float] = []
-    n_success_env = 0
-    n_success_max = 0
-    for ep in per_episode:
-        r = ep.get("max_reward")
-        if r is None:
-            continue
-        max_rewards.append(float(r))
-        if coerce_success(ep.get("success")):
-            n_success_env += 1
-        if r >= 0.95:
-            n_success_max += 1
-
-    if not max_rewards:
-        raise SystemExit(f"No max_reward values found in {json_path}")
-
-    avg_max = sum(max_rewards) / len(max_rewards)
+    max_rewards, successes = extract_episodes(data)
+    n = len(max_rewards)
+    n_success_env = sum(1 for s in successes if s)
+    n_success_max = sum(1 for r in max_rewards if r >= 0.95)
+    avg_max = sum(max_rewards) / n
     pc_env = n_success_env / n
     pc_max = n_success_max / n
     ci_env = wilson_ci(n_success_env, n)
     ci_max = wilson_ci(n_success_max, n)
 
-    aggregated = data.get("aggregated") or {}
-    reported_pc = aggregated.get("pc_success")
-    reported_avg = aggregated.get("avg_max_reward")
+    # Cross-check against lerobot's own aggregated metrics.
+    # lerobot 0.5.x: data["overall"]; legacy: data["aggregated"].
+    reported = data.get("overall") or data.get("aggregated") or {}
+    reported_pc = reported.get("pc_success")
+    reported_avg = reported.get("avg_max_reward")
 
     bar = "=" * 64
     print(f"\n{bar}")
@@ -104,13 +147,13 @@ def main() -> None:
           f"{avg_max:>7.3f}")
     if reported_pc is not None or reported_avg is not None:
         print()
-        print(f"  cross-check vs aggregated in eval_info.json:")
+        print(f"  cross-check vs lerobot's own aggregated:")
         if reported_pc is not None:
             # lerobot stores pc_success as a percentage (already *100).
-            print(f"    aggregated.pc_success:    {reported_pc:>7.3f} (== "
+            print(f"    pc_success:    {reported_pc:>7.3f}  (== "
                   f"{pc_env * 100:.3f} computed)")
         if reported_avg is not None:
-            print(f"    aggregated.avg_max_reward: {reported_avg:>6.3f} (== "
+            print(f"    avg_max_reward: {reported_avg:>6.3f}  (== "
                   f"{avg_max:.3f} computed)")
     print(bar)
 
